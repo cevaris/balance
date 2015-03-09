@@ -29,7 +29,7 @@ func main() {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	log.Info("%s %s", r.Method, r.RequestURI)
-	h := lob.NextHost()
+	h := lob.Strategy.NextHost()
 	forwardRequest(w, r, h)
 }
 

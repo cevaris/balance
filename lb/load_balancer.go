@@ -7,11 +7,32 @@ import (
 )
 
 // http://www.peplink.com/technology/load-balancing-algorithms/
-const (
-	RandomStrategy = iota
-	WeightedStrategy
-	PriorityStrategy
-)
+
+var Hosts []*Host
+
+type LoadBalancerStrategy interface {
+	NextHost() *Host
+}
+
+type RandomStrategy struct {
+}
+
+func (s* RandomStrategy) NextHost() *Host {
+	if len(Hosts) == 0 {
+		return nil
+	}
+	hostCount := len(Hosts)
+	return Hosts[rand.Intn(hostCount)]
+}
+
+type WeightedStrategy struct {
+
+}
+
+func (s* WeightedStrategy) NextHost() *Host {
+	return Hosts[0]
+}
+
 
 
 type Host struct {
@@ -32,21 +53,21 @@ func NewHost(addr string, weight int) *Host {
 	}
 }
 
-
-
 type LoadBalancer struct {
-	Hosts []*Host
+	Strategy LoadBalancerStrategy
 }
 
 func NewLoadBalancer() *LoadBalancer {
 	h1 := NewHost("localhost:5000", 1)
 	h2 := NewHost("localhost:5001", 2)
 	h3 := NewHost("localhost:5002", 3)
-	hosts := []*Host{h1, h2, h3}
+	Hosts = setupWeightPercentages(
+		[]*Host{h1, h2, h3},
+	)
 
-	lob := &LoadBalancer{}
-	lob.Hosts = setupWeightPercentages(hosts)
-
+	lob := &LoadBalancer{
+		Strategy: &RandomStrategy{},
+	}
 	return lob
 }
 
@@ -60,15 +81,6 @@ func setupWeightPercentages(hosts []*Host) []*Host{
 		v.WeightPercent = percents[i]
 	}
 	return hosts
-}
-
-func (l *LoadBalancer) NextHost() *Host {
-	return l.RandHost()
-}
-
-func (l *LoadBalancer) RandHost() *Host {
-	hostCount := len(l.Hosts)
-	return l.Hosts[rand.Intn(hostCount)]
 }
 
 type LoadBalancerMiddleware struct {
