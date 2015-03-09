@@ -2,13 +2,16 @@ package main
 
 import (
 	"io"
+	"io/ioutil"
 	"flag"
 	"fmt"
 	"math/rand"
 	"net/http"
+
+	"github.com/op/go-logging"
 )
 
-
+var log = logging.MustGetLogger("example_app")
 var host string
 var port int
 
@@ -34,18 +37,30 @@ func main() {
 	server.ListenAndServe()
 }
 
+func logRequest(r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Error("%s", err)
+	}
+	log.Debug("%s %s %s", r.Method, r.RequestURI, body)
+}
+
 func index(w http.ResponseWriter, r *http.Request) {
+	logRequest(r)
 	io.WriteString(w, "Welcome to golang!")
 }
 
 func hello(w http.ResponseWriter, r *http.Request) {
+	logRequest(r)
 	io.WriteString(w, "Hello world!")
 }
 
 func whoami(w http.ResponseWriter, r *http.Request) {
+	logRequest(r)
 	io.WriteString(w, fmt.Sprintf("I am %s",location(host, port)))
 }
 
 func randInt(w http.ResponseWriter, r *http.Request) {
+	logRequest(r)
 	io.WriteString(w, fmt.Sprintf("%d",rand.Int31()))
 }

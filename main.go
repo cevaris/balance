@@ -5,20 +5,22 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/op/go-logging"
+
 	"github.com/cevaris/balance/lb"
 )
 
 var LB_ADDRESS string = "localhost:8000"
 var lob *balance.LoadBalancer
-
+var log = logging.MustGetLogger("balance")
 
 func main() {
+	logging.SetLevel(logging.INFO, "balance")
 
 	lob = balance.NewLoadBalancer()
-	mid := &balance.LoadBalancerMiddleware{Handler:http.HandlerFunc(index)}
+	mid := &balance.LoadBalancerMiddleware{Handler:http.HandlerFunc(handler)}
 	server := &http.Server{
 		Addr: LB_ADDRESS,
-		// Handler: logs.NewApacheLoggingHandler(mux, os.Stdout),
 		Handler: mid,
 	}
 	fmt.Println("Listening on", LB_ADDRESS)
@@ -26,22 +28,26 @@ func main() {
 
 }
 
-func index(w http.ResponseWriter, r *http.Request) {
+func handler(w http.ResponseWriter, r *http.Request) {
+	log.Info("%s %s", r.Method, r.RequestURI)
+	h := lob.NextHost()
+	forwardRequest(w, r, h)
+}
 
-	 host := lob.RandHost()
+func forwardRequest(w http.ResponseWriter, r *http.Request, h *balance.Host) {
+	forwardURI := h.RequestURI(r.RequestURI)
 
-	fmt.Println(r.Method)
-	fmt.Println(r.RequestURI)
+	log.Debug("forwarding %s %s", r.Method, forwardURI)
 
 	req, errReq := http.NewRequest(
 		r.Method,
-		host.RequestURI(r.RequestURI),
+		forwardURI,
 		r.Body)
 	if errReq != nil {
 		panic(errReq)
 	}
 
-	req.Header.Add("LB-RESPONDER", host.Addr)
+	req.Header.Add("LB-RESPONDER", h.Addr)
 	client := &http.Client{}
 	resp, errResp := client.Do(req)
 	if errResp != nil {
