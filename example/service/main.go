@@ -8,6 +8,8 @@ import (
 	"math/rand"
 	"net/http"
 
+	"github.com/cevaris/httprouter"
+
 	"github.com/op/go-logging"
 )
 
@@ -24,17 +26,32 @@ func main() {
 	flag.StringVar(&host, "h", "localhost", "host location")
 	flag.Parse()
 
-	mux := http.DefaultServeMux
-	mux.HandleFunc("/", index)
-	mux.HandleFunc("/hello", hello)
-	mux.HandleFunc("/whoami", whoami)
-	mux.HandleFunc("/rand-int", randInt)
-	server := &http.Server{
-		Addr: location(host, port),
-	}
+	router := httprouter.New()
+	// router.GET("/", index)
+	// router.PUT("/", index)
+	router.ALL("/", index)
+	router.GET("/hello", hello)
+	router.GET("/whoami", whoami)
+	router.GET("/rand-int", randInt)
+	// server := &http.Server{
+	// 	Addr: location(host, port),
+	// }
+	http.ListenAndServe(
+		location(host, port),
+		router,
+	)
 
-	fmt.Println("Listening on", location(host, port))
-	server.ListenAndServe()
+	// mux := http.DefaultServeMux
+	// mux.HandleFunc("/", index)
+	// mux.HandleFunc("/hello", hello)
+	// mux.HandleFunc("/whoami", whoami)
+	// mux.HandleFunc("/rand-int", randInt)
+	// server := &http.Server{
+	// 	Addr: location(host, port),
+	// }
+
+	// fmt.Println("Listening on", location(host, port))
+	// server.ListenAndServe()
 }
 
 func logRequest(r *http.Request) {
@@ -45,22 +62,22 @@ func logRequest(r *http.Request) {
 	log.Debug("%s %s %s", r.Method, r.RequestURI, body)
 }
 
-func index(w http.ResponseWriter, r *http.Request) {
+func index(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	logRequest(r)
 	io.WriteString(w, "Welcome to golang!")
 }
 
-func hello(w http.ResponseWriter, r *http.Request) {
+func hello(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	logRequest(r)
 	io.WriteString(w, "Hello world!")
 }
 
-func whoami(w http.ResponseWriter, r *http.Request) {
+func whoami(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	logRequest(r)
 	io.WriteString(w, fmt.Sprintf("I am %s",location(host, port)))
 }
 
-func randInt(w http.ResponseWriter, r *http.Request) {
+func randInt(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	logRequest(r)
 	io.WriteString(w, fmt.Sprintf("%d",rand.Int31()))
 }

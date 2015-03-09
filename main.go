@@ -11,21 +11,20 @@ import (
 )
 
 var LB_ADDRESS string = "localhost:8000"
-var lob *balance.LoadBalancer
+var lob *lb.LoadBalancer
 var log = logging.MustGetLogger("balance")
 
 func main() {
 	logging.SetLevel(logging.INFO, "balance")
 
-	lob = balance.NewLoadBalancer()
-	mid := &balance.LoadBalancerMiddleware{Handler:http.HandlerFunc(handler)}
+	lob = lb.NewLoadBalancer()
+	mid := &lb.LoadBalancerMiddleware{Handler:http.HandlerFunc(handler)}
 	server := &http.Server{
 		Addr: LB_ADDRESS,
 		Handler: mid,
 	}
 	fmt.Println("Listening on", LB_ADDRESS)
 	server.ListenAndServe()
-
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +33,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	forwardRequest(w, r, h)
 }
 
-func forwardRequest(w http.ResponseWriter, r *http.Request, h *balance.Host) {
+func forwardRequest(w http.ResponseWriter, r *http.Request, h *lb.Host) {
 	forwardURI := h.RequestURI(r.RequestURI)
 
 	log.Debug("forwarding %s %s", r.Method, forwardURI)

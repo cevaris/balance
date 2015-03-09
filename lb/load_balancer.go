@@ -1,4 +1,4 @@
-package balance
+package lb
 
 import (
 	"fmt"
@@ -6,18 +6,18 @@ import (
 	"net/http"
 )
 
-/*
-http://www.peplink.com/technology/load-balancing-algorithms/
-*/
-
-type LoadBalancer struct {
-	Hosts []*Host
-}
+// http://www.peplink.com/technology/load-balancing-algorithms/
+const (
+	RandomStrategy = iota
+	WeightedStrategy
+	PriorityStrategy
+)
 
 
 type Host struct {
 	Addr string
 	Weight int
+	WeightPercent int
 }
 
 func (h *Host) RequestURI(path string) string {
@@ -25,18 +25,42 @@ func (h *Host) RequestURI(path string) string {
 }
 
 func NewHost(addr string, weight int) *Host {
-	return &Host{Addr: addr, Weight: weight}
-}
-
-func NewLoadBalancer() *LoadBalancer {
-	h1 := NewHost("localhost:5000", 0)
-	h2 := NewHost("localhost:5001", 1)
-	h3 := NewHost("localhost:5002", 2)
-	return &LoadBalancer{
-		Hosts: []*Host{h1, h2, h3},
+	return &Host{
+		Addr: addr,
+		Weight: weight,
+		WeightPercent: 1.0,
 	}
 }
 
+
+
+type LoadBalancer struct {
+	Hosts []*Host
+}
+
+func NewLoadBalancer() *LoadBalancer {
+	h1 := NewHost("localhost:5000", 1)
+	h2 := NewHost("localhost:5001", 2)
+	h3 := NewHost("localhost:5002", 3)
+	hosts := []*Host{h1, h2, h3}
+
+	lob := &LoadBalancer{}
+	lob.Hosts = setupWeightPercentages(hosts)
+
+	return lob
+}
+
+func setupWeightPercentages(hosts []*Host) []*Host{
+	weights := make([]int, len(hosts))
+	for i, v := range(hosts) {
+		weights[i] = v.Weight
+	}
+	percents := calcWeightPercentages(weights)
+	for i, v := range(hosts) {
+		v.WeightPercent = percents[i]
+	}
+	return hosts
+}
 
 func (l *LoadBalancer) NextHost() *Host {
 	return l.RandHost()
@@ -46,7 +70,6 @@ func (l *LoadBalancer) RandHost() *Host {
 	hostCount := len(l.Hosts)
 	return l.Hosts[rand.Intn(hostCount)]
 }
-
 
 type LoadBalancerMiddleware struct {
 	Handler http.Handler
